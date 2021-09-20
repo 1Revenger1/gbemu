@@ -1,5 +1,6 @@
 #pragma once
 #include <windows.h>
+#include <stdio.h>
 #include "gbcpu.h"
 
 #define MAX_SIZE 0xFFFF
@@ -19,12 +20,16 @@
 
 #define SPRITE_ATTR_SIZE 0xFE9F - 0xFE00
 
-#define ROM_BANK_TO_PTR(buffer, n) ((char *) buffer + ((n) * ROM_BANK_SIZE))
+#define ROM_BANK_TO_PTR(buffer, n) ((UINT8 *) buffer + ((n) * ROM_BANK_SIZE))
 
 struct gbRom {
-	CHAR* romBank0;
-	CHAR* romBankN;
+	UINT8* romBank0;
+	UINT8* romBankN;
 	int bank{ 0 };
+
+	// Battery backed data
+	UINT8 ram[ERAM_SIZE];
+	int ramBank{ 0 };
 
 	LPVOID romBuffer;
 	HANDLE hRom;
@@ -32,19 +37,16 @@ struct gbRom {
 };
 
 struct gbGpu {
-	CHAR vram[VRAM_SIZE];
-	int bank{ 0 };	// Two banks on Gameboy Color
+	UINT8 vram[VRAM_SIZE];
+	// int bank{ 0 };	// Two banks on Gameboy Color
 
-	CHAR spriteAttr[SPRITE_ATTR_SIZE];
+	UINT8 spriteAttr[SPRITE_ATTR_SIZE];
 };
 
 struct gbRam {
-	CHAR eram[ERAM_SIZE];
-	int eramBank{ 0 };
-
-	CHAR ramBank0[WRAM_BANKS_SIZE];
-	CHAR ramBankn[WRAM_BANKS_SIZE];
-	int wramBank{ 0 };
+	UINT8 ramBank0[WRAM_BANKS_SIZE];
+	UINT8 ramBankn[WRAM_BANKS_SIZE];
+	// int wramBank{ 0 };
 };
 
 struct Gb {
@@ -57,4 +59,16 @@ struct Gb {
 
 
 void startupRom(Gb* gb);
-CHAR readByte(Gb* gb, SHORT addr);
+void execute(Gb* gb);
+UINT8 readByte(Gb* gb, UINT16 addr);
+UINT16 readShort(Gb* gb, UINT16 addr);
+void writeByte(Gb* gb, UINT16 addr, UINT8 val);
+
+inline void debugPrint(const char *fmt...) {
+	char str[1024];
+	va_list args;
+	va_start(args, fmt);
+	vsprintf_s(str, sizeof(str), fmt, args);
+	va_end(args);
+	OutputDebugStringA(str);
+}

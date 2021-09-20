@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Source Files\MBC">
+      <UniqueIdentifier>{00e278e8-5708-4839-9257-1bcec3f8c89e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="gbemu.cpp">
@@ -24,6 +27,12 @@
     <ClCompile Include="gbInit.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="gbIO.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MBC.cpp">
+      <Filter>Source Files\MBC</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="gbcpu.h">
@@ -31,6 +40,9 @@
     </ClInclude>
     <ClInclude Include="gb.h">
       <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MBC.h">
+      <Filter>Source Files\MBC</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

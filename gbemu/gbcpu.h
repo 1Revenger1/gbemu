@@ -12,7 +12,7 @@
 		SHORT name;			\
 	}
 
-#define BIT(n) (1 << (n));
+#define BIT(n) (1 << (n))
 
 // Result is zero
 #define ZERO_FLAG		BIT(7)
@@ -30,6 +30,8 @@
 #define SUBTRACT_FLAG	BIT(6)
 //Carry for the lower 4 bits of result (CARRY_FLAG is for higher 8 bits)
 #define HALF_CARRY_FLAG BIT(5)
+
+#define ALL_FLAGS ZERO_FLAG | CARRY_FLAG | SUBTRACT_FLAG | HALF_CARRY_FLAG
 
 struct gbCpu {
 	REGISTER(AF, A, F);	// Accumulator & Flags

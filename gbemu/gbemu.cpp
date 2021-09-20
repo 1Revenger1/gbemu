@@ -33,11 +33,9 @@ int WINAPI WinMain(
 			NULL
 		);
 
-		char str[256];
-		sprintf_s(str, sizeof(str), "Found rom of size %x\n", fileSize);
-		OutputDebugStringA(str);
+		debugPrint("Found rom of size %x\n", fileSize);
 
-		CHAR* romBuffer = new CHAR[fileSize];
+		UINT8* romBuffer = new UINT8[fileSize];
 		DWORD bytesRead;
 
 		if (!ReadFile(

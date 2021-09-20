@@ -5,12 +5,13 @@ void startupRom(Gb* gb)
 {
 	gbCpu* cpu = &gb->cpu;
 
-	cpu->SP = 0xFFFE;
+	cpu->SP = (UINT16) 0xFFFE;
+	cpu->PC = 0x100;
 	memset(gb->gpu.vram, 0, VRAM_SIZE);
 
-	char str[13 + 0x10];
-	sprintf_s(str, sizeof(str), "ROM Name: %s\n", &gb->rom.romBank0[0x134]);
-	OutputDebugStringA(str);
+	debugPrint("RomName: %s\nRomType: %x\n", 
+		&gb->rom.romBank0[0x134], 
+		gb->rom.romBank0[0x147]);
 
-
+	execute(gb);
 }
