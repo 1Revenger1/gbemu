@@ -4,13 +4,17 @@
 #include <Windows.h>
 
 static bool run = true;
-static bool interrupts = true;
 
 #define NOP(opcode) case opcode: { cpu.PC += 1; break; }
 
 #define LD_8(opcode, regA, regB) case opcode: { cpu.regA = cpu.regB; cpu.PC += 1; break; }
 #define LD_8M(opcode, regA) case opcode: { cpu.regA = readByte(gb, cpu.HL); cpu.PC += 1; break; }
-#define LD_M8(opcode, regB) case opcode: { writeByte(gb, readShortArg(), cpu.regB); cpu.PC += 2; break; }
+#define LD_8_A16(opcode, regB) case opcode: { writeByte(gb, readShortArg(), cpu.regB); cpu.PC += 3; break; }
+#define LD_8_IM(opcode, regA) case opcode: { cpu.regA = readByteArg(); cpu.PC += 2; break; }
+#define LD_8HL_IM(opcode) case opcode: { writeByte(gb, cpu.HL, readByteArg()); cpu.PC +=2; break; }
+
+#define LD_IO_R(opcode) case opcode: { cpu.A = readByte(gb, 0xFF00 + readByteArg()); cpu.PC += 2; break; }
+#define LD_IO_W(opcode) case opcode: { writeByte(gb, 0xFF00 + readByteArg(), cpu.A); cpu.PC += 2; break; }
 
 #define LD_BLK(base, reg)   \
     LD_8(base + 0, reg, B)  \
@@ -46,6 +50,16 @@ static bool interrupts = true;
         cpu.PC += (char) readByteArg();    \
     }                                       \
     cpu.PC += 2;                            \
+    break;                                  \
+}
+
+#define CALL(opcode, cond) case opcode: {   \
+    UINT16 addr = readShortArg();           \
+    cpu.PC += 3;                            \
+    if (cond) {                             \
+        pushStackShort(gb, cpu.PC);         \
+        cpu.PC = addr;                      \
+    }                                       \
     break;                                  \
 }
 
@@ -157,6 +171,9 @@ static bool interrupts = true;
 
 #define JP_A16(opcode) case opcode: { cpu.PC = readShortArg(); break; }
 
+#define DI(opcode) case opcode: { cpu.interruptEnable=false; cpu.PC += 1; break; }
+#define EI(opcode) case opcode: { cpu.interruptEnable=true; cpu.PC += 1; break; }
+
 #define readShortArg() readShort(gb, cpu.PC + 1)
 #define readByteArg() readByte(gb, cpu.PC + 1)
 
@@ -174,11 +191,19 @@ static void instr(Gb* gb)
 
     switch (instr) {
         NOP(0x00)
+        LD_8_IM(0x06, B)
+        LD_8_IM(0x0E, C)
+        LD_8_IM(0x16, D)
         JR_8(0x18, JR_COND_NONE)
+        LD_8_IM(0x1E, E)
         JR_8(0x20, JR_COND_NZ)
+        LD_8_IM(0x26, H)
         JR_8(0x28, JR_COND_Z)
+        LD_8_IM(0x2E, L)
         JR_8(0x30, JR_COND_NC)
+        LD_8HL_IM(0x36)
         JR_8(0x38, JR_COND_C)
+        LD_8_IM(0x3E, A)
         LD_BLK(0x40, B)
         LD_BLK(0x48, C)
         LD_BLK(0x50, D)
@@ -198,7 +223,16 @@ static void instr(Gb* gb)
         BLK(0xB8, CP_8, 1)
 
         JP_A16(0xC3)
-        LD_M8(0xEA, A)
+        CALL(0xC4, JR_COND_NZ)
+        CALL(0xCC, JR_COND_Z)
+        CALL(0xCD, JR_COND_NONE)
+        CALL(0xD4, JR_COND_NC)
+        CALL(0xDC, JR_COND_C)
+        LD_IO_W(0xE0)
+        LD_8_A16(0xEA, A)
+        LD_IO_R(0xF0)
+        DI(0xF3)
+        EI(0xFB)
         CP_8(0xFE, readByteArg(), 2)
     default:
         debugPrint("Unknown OP: %x SP: %x PC: %x\n", instr, cpu.SP, cpu.PC);
@@ -209,11 +243,6 @@ static void instr(Gb* gb)
 static void loadAddr(Gb* gb, char* a, char* b)
 {
 
-}
-
-static void enableInterrupts(bool newVal)
-{
-    interrupts = newVal;
 }
 
 void execute(Gb* gb)

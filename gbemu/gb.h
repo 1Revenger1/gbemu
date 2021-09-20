@@ -5,12 +5,6 @@
 
 #define MAX_SIZE 0xFFFF
 
-// interrupt enable flags
-#define VBLANK_INTR		BIT(0)
-#define LCDSTAT_INTR	BIT(1)
-#define TIMER_INTR		BIT(2)
-#define SERIAL_INTR		BIT(3)
-#define JOYPAD_INTR		BIT(4)
 
 #define KiloByte		1024
 #define ROM_BANK_SIZE	16 * KiloByte
@@ -19,6 +13,7 @@
 #define WRAM_BANKS_SIZE 4 * KiloByte
 
 #define SPRITE_ATTR_SIZE 0xFE9F - 0xFE00
+#define HIGH_RAM_SIZE 0xFFFE - 0xFF80
 
 #define ROM_BANK_TO_PTR(buffer, n) ((UINT8 *) buffer + ((n) * ROM_BANK_SIZE))
 
@@ -47,6 +42,8 @@ struct gbRam {
 	UINT8 ramBank0[WRAM_BANKS_SIZE];
 	UINT8 ramBankn[WRAM_BANKS_SIZE];
 	// int wramBank{ 0 };
+
+	UINT8 hram[HIGH_RAM_SIZE];
 };
 
 struct Gb {
@@ -61,6 +58,8 @@ struct Gb {
 void startupRom(Gb* gb);
 void execute(Gb* gb);
 UINT8 readByte(Gb* gb, UINT16 addr);
+void pushStackShort(Gb* gb, UINT16 val);
+UINT16 readStackShort(Gb* gb);
 UINT16 readShort(Gb* gb, UINT16 addr);
 void writeByte(Gb* gb, UINT16 addr, UINT8 val);
 
