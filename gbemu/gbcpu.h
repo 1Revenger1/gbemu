@@ -6,10 +6,10 @@
 #define REGISTER(name, high, low) \
 	union {					\
 		struct {			\
-			CHAR (low);		\
-			CHAR (high);	\
+			UINT8 low;		\
+			UINT8 high;		\
 		};					\
-		SHORT name;			\
+		UINT16 name;			\
 	}
 
 #define BIT(n) (1 << (n))
@@ -43,12 +43,26 @@
 #define ALL_INTR_FLAGS VBLANK_INTR | LCDSTAT_INTR | TIMER_INTR | SERIAL_INTR | JOYPAD_INTR
 
 struct gbCpu {
-	REGISTER(AF, A, F);	// Accumulator & Flags
+	// Accumulator & Flags
+	struct {
+		union {
+			UINT8 F;
+			struct {
+				UINT8 _ : 4;
+				UINT8 carry : 1;
+				UINT8 halfCarry : 1;
+				UINT8 subtract : 1;
+				UINT8 zero : 1;
+			};
+		};
+		UINT8 A;
+	};
+
 	REGISTER(BC, B, C);
 	REGISTER(DE, D, E);
 	REGISTER(HL, H, L);
-	SHORT SP;	// Stack Pointer
-	SHORT PC;	// Program Counter
+	UINT16 SP;	// Stack Pointer
+	UINT16 PC;	// Program Counter
 
 	bool interruptEnable{ true };
 	UINT8 interrupts{ ALL_INTR_FLAGS };

@@ -47,7 +47,7 @@ static bool run = true;
 
 #define JR_8(opcode, cond) case opcode: {   \
     if (cond) {                             \
-        cpu.PC += (char) readByteArg();    \
+        cpu.PC += (char) readByteArg();     \
     }                                       \
     cpu.PC += 2;                            \
     break;                                  \
@@ -92,7 +92,7 @@ static bool run = true;
     break;                                                  \
 }
 
-#define SUB_8(opcode, bVal, inc) case opcode: {                    \
+#define SUB_8(opcode, bVal, inc) case opcode: {             \
     cpu.F &= ~ALL_FLAGS;                                    \
     UINT8 b = bVal;                                         \
     UINT8 lowerRes = (cpu.A & 0xf) - (b & 0xf);             \
@@ -106,7 +106,7 @@ static bool run = true;
     break;                                                  \
 }
 
-#define CP_8(opcode, bVal, inc) case opcode: {                    \
+#define CP_8(opcode, bVal, inc) case opcode: {              \
     cpu.F &= ~ALL_FLAGS;                                    \
     UINT8 b = bVal;                                         \
     UINT8 lowerRes = (cpu.A & 0xf) - (b & 0xf);             \
@@ -119,7 +119,7 @@ static bool run = true;
     break;                                                  \
 }
 
-#define SBC_8(opcode, bVal, inc) case opcode: {                    \
+#define SBC_8(opcode, bVal, inc) case opcode: {             \
     cpu.F &= ~ALL_FLAGS;                                    \
     UINT8 cy = (cpu.F & CARRY_FLAG) >> 3;                   \
     UINT8 b = bVal + cy;                                    \
@@ -134,8 +134,8 @@ static bool run = true;
     break;                                                  \
 }
 
-#define AND_8(opcode, bVal, inc) case opcode: {                    \
-    cpu.A &= bVal;                                             \
+#define AND_8(opcode, bVal, inc) case opcode: {             \
+    cpu.A &= bVal;                                          \
     cpu.F &= ~ALL_FLAGS;                                    \
     cpu.F |= HALF_CARRY_FLAG;                               \
     if (cpu.A == 0) cpu.F |= ZERO_FLAG;                     \
@@ -143,16 +143,16 @@ static bool run = true;
     break;                                                  \
 }
 
-#define XOR_8(opcode, bVal, inc) case opcode: {                     \
-    cpu.A ^= bVal;                                             \
+#define XOR_8(opcode, bVal, inc) case opcode: {             \
+    cpu.A ^= bVal;                                          \
     cpu.F &= ~ALL_FLAGS;                                    \
     if (cpu.A == 0) cpu.F |= ZERO_FLAG;                     \
     cpu.PC += inc;                                          \
     break;                                                  \
 }
 
-#define OR_8(opcode, bVal, inc) case opcode: {                     \
-    cpu.A |= bVal;                                             \
+#define OR_8(opcode, bVal, inc) case opcode: {              \
+    cpu.A |= bVal;                                          \
     cpu.F &= ~ALL_FLAGS;                                    \
     if (cpu.A == 0) cpu.F |= ZERO_FLAG;                     \
     cpu.PC += inc;                                          \
@@ -177,9 +177,67 @@ static bool run = true;
 #define readShortArg() readShort(gb, cpu.PC + 1)
 #define readByteArg() readByte(gb, cpu.PC + 1)
 
+#define PREFIX_BIT_8(opcode, n, reg) case opcode: { if(cpu.reg & BIT(n)) { cpu.F  } break;}
+
+#define PREFIX_RES_8(opcode, n, reg) case opcode: { cpu.reg &= ~BIT(n); break; }
+#define PREFIX_RES_HL(opcode, n) case opcode: {     \
+    UINT8 reg = readByte(gb, cpu.HL);               \
+    writeByte(gb, cpu.HL, reg &= ~BIT(n));          \
+    break;                                          \
+}
+
+#define PREFIX_SET_8(opcode, n, reg) case opcode: { cpu.reg |= BIT(n); break; }
+#define PREFIX_SET_HL(opcode, n) case opcode: {     \
+    UINT8 reg = readByte(gb, cpu.HL);               \
+    writeByte(gb, cpu.HL, reg |= BIT(n));           \
+    break;                                          \
+}
+
+#define PREFIX_BLK(opcode, instr, n)        \
+    PREFIX_##instr##_8(opcode + 0, n, B)    \
+    PREFIX_##instr##_8(opcode + 1, n, C)    \
+    PREFIX_##instr##_8(opcode + 2, n, D)    \
+    PREFIX_##instr##_8(opcode + 3, n, E)    \
+    PREFIX_##instr##_8(opcode + 4, n, H)    \
+    PREFIX_##instr##_8(opcode + 5, n, L)    \
+    PREFIX_##instr##_HL(opcode + 6, n)      \
+    PREFIX_##instr##_8(opcode + 7, n, A)    \
+
+#define PREFIX_BLK_ALL_BITS(opcode, instr)  \
+    PREFIX_BLK(opcode + 0x00, instr, 0)     \
+    PREFIX_BLK(opcode + 0x08, instr, 1)     \
+    PREFIX_BLK(opcode + 0x10, instr, 2)     \
+    PREFIX_BLK(opcode + 0x18, instr, 3)     \
+    PREFIX_BLK(opcode + 0x20, instr, 4)     \
+    PREFIX_BLK(opcode + 0x28, instr, 5)     \
+    PREFIX_BLK(opcode + 0x30, instr, 6)     \
+    PREFIX_BLK(opcode + 0x38, instr, 7)     \
+
+#define PREFIX(opcode) case opcode: { prefixInstr(gb); break; }
+
 static void halt(Gb * gb) {
     OutputDebugString(_T("HALT"));
     exit(0x20);
+}
+
+static void prefixInstr(Gb* gb)
+{
+    gbCpu &cpu = gb->cpu;
+    BYTE instr = readByte(gb, cpu.PC + 1);
+
+    debugPrint("PC: %x OP: $CB $%x\n", cpu.PC, instr);
+
+    switch (instr) {
+        PREFIX_BLK_ALL_BITS(0x80, RES)
+        PREFIX_BLK_ALL_BITS(0xC0, SET)
+
+    default:
+        debugPrint("Unknown Prefixed OP: %x SP: %x PC: %x\n", instr, cpu.SP, cpu.PC);
+        exit(0x19);
+    }
+
+    // Prefixed instructions are always two bytes long
+    cpu.PC += 2;
 }
 
 static void instr(Gb* gb)
@@ -224,6 +282,7 @@ static void instr(Gb* gb)
 
         JP_A16(0xC3)
         CALL(0xC4, JR_COND_NZ)
+        PREFIX(0xCB)
         CALL(0xCC, JR_COND_Z)
         CALL(0xCD, JR_COND_NONE)
         CALL(0xD4, JR_COND_NC)
