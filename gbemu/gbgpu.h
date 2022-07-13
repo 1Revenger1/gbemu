@@ -54,7 +54,6 @@ struct Color {
 	}
 };
 
-// Pallete from https://github.com/rvaccarim/FrozenBoy/blob/master/FrozenBoyUI/FrozenBoyGame.cs#L108-L114
 struct Pallete {
 	Color white;
 	Color light_gray;
@@ -64,6 +63,7 @@ struct Pallete {
 
 class gbGpu : public gbSpace {
 public:
+	// Pallete from https://github.com/rvaccarim/FrozenBoy/blob/master/FrozenBoyUI/FrozenBoyGame.cs#L108-L114
 	Pallete palletes[1] {
 	{ { 224, 248, 208, 255 },
 	  { 136, 192, 112, 255 },

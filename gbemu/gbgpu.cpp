@@ -28,10 +28,13 @@ void gbGpu::renderTile(int x, int y, int bgX, int bgY, UINT16 tilemap) {
 	int byte = tileAddr + (tileY * 2);
 	UINT8 low = (readByte(byte) >> (7 - tileX)) & 0x1;
 	UINT8 high = (readByte(byte + 1) >> (7 - tileX)) & 0x1;
-	UINT8 palette_dx = low | (high << 1);
-	Color color = pallete.white;
+	UINT8 paletteIdx = low | (high << 1);
 
-	switch (palette_dx) {
+	// Grab color from Palette data
+	UINT8 paletteColor = (bgp >> (paletteIdx * 2)) & 0x3;
+
+	Color color = pallete.white;
+	switch (paletteColor) {
 	case 0: color = pallete.white; break;
 	case 1: color = pallete.light_gray; break;
 	case 2: color = pallete.dark_gray; break;
@@ -65,6 +68,7 @@ void gbGpu::renderSprites() {
 	std::sort(queue.begin(), queue.end(), std::greater<gbSprite&>());
 
 	for (gbSprite& sprite : queue) {
+		UINT8 palleteData = sprite.flags & 0x10 ? obp1 : obp0;
 		int spriteY = line - (sprite.y_pos - 16);
 		bool yflip = sprite.flags & 0x40;
 		bool xflip = sprite.flags & 0x20;
@@ -89,15 +93,21 @@ void gbGpu::renderSprites() {
 		UINT8 low = readByte(addr);
 
 		for (int spriteX = 7; spriteX >= 0; spriteX--) {
-			UINT8 palette_dx = (low & 1) | ((high & 1) << 1);
-			Color color = pallete.white;
+			// Grab color from Palette data
+			UINT8 paletteIdx = (low & 1) | ((high & 1) << 1);
+			UINT8 paletteColor = (palleteData >> (paletteIdx * 2)) & 0x3;
+
 			UINT8 correctX = xflip ? 7 - spriteX : spriteX;
 
 			high >>= 1;
 			low >>= 1;
 
-			switch (palette_dx) {
-			case 0: continue; // Transparent
+			// Index 0 is ignored and transparent
+			if (paletteIdx == 0) continue;
+
+			Color color = pallete.white;
+			switch (paletteColor) {
+			case 0: color = pallete.white; break;
 			case 1: color = pallete.light_gray; break;
 			case 2: color = pallete.dark_gray; break;
 			case 3: color = pallete.black; break;
