@@ -11,7 +11,7 @@ void sdlWindow::present() {
 
 		for (int y = 0; y < DISP_HEIGHT; y++) {
 			for (int x = 0; x < DISP_WIDTH; x++) {
-				framebuffer[(y * DISP_WIDTH) + x] = g_gb->gpu->framebuffer[y][x];
+				framebuffer[(y * DISP_WIDTH) + x] = g_gb->gpu->frontBuffer[y][x];
 			}
 		}
 

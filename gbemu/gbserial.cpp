@@ -9,6 +9,8 @@ int gbSerial::writeByte(UINT16 addr, UINT8 byte) {
 		break;
 	default: return -1;
 	}
+
+	return 0;
 }
 
 int gbSerial::readByte(UINT16 addr) {

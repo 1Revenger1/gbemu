@@ -5,15 +5,28 @@
 #include <algorithm>
 #include <assert.h>
 
+Color& getColor(Palette& palette, UINT8 idx) {
+	assert(idx < 4);
+
+	switch (idx) {
+	case 0: return palette.white;
+	case 1: return palette.light_gray;
+	case 2: return palette.dark_gray;
+	case 3: return palette.black;
+	}
+
+	return palette.white;
+}
+
 void gbGpu::renderTile(int x, int y, int bgX, int bgY, UINT16 tilemap) {
-	Pallete& pallete = palletes[0];
+	Palette& palette = this->palette[0];
 	int tileLocX = bgX / 8;
 	int tileLocY = bgY / 8;
 
 	// 32 tiles per row
 	int tileIdx = (tileLocY * 32) + tileLocX;
 
-	UINT8 tileNumber = readByte(tilemap + tileIdx);
+	UINT8 tileNumber = vram[tilemap - 0x8000 + tileIdx];
 
 	UINT16 tileAddr;
 	if (bgWindow8000Method()) {
@@ -26,30 +39,34 @@ void gbGpu::renderTile(int x, int y, int bgX, int bgY, UINT16 tilemap) {
 	int tileY = bgY % 8;
 
 	int byte = tileAddr + (tileY * 2);
-	UINT8 low = (readByte(byte) >> (7 - tileX)) & 0x1;
-	UINT8 high = (readByte(byte + 1) >> (7 - tileX)) & 0x1;
+	UINT8 low = (vram[byte - 0x8000] >> (7 - tileX)) & 0x1;
+	UINT8 high = (vram[byte + 1 - 0x8000] >> (7 - tileX)) & 0x1;
 	UINT8 paletteIdx = low | (high << 1);
 
 	// Grab color from Palette data
 	UINT8 paletteColor = (bgp >> (paletteIdx * 2)) & 0x3;
 
-	Color color = pallete.white;
-	switch (paletteColor) {
-	case 0: color = pallete.white; break;
-	case 1: color = pallete.light_gray; break;
-	case 2: color = pallete.dark_gray; break;
-	case 3: color = pallete.black; break;
-	}
+	Color& color = getColor(palette, paletteColor);
 
 	assert(y >= 0 && y < DISP_HEIGHT&&
 		   x >= 0 && x < DISP_WIDTH);
 	
-	framebuffer[y][x] = color;
+	backBuffer[y][x] = color;
 }
 
+/*
+ * Works in 3 steps
+ * 1. Create list of up to 10 sprites to render
+ * 2. From lowest to highest priority, draw sprites
+ * 3. Copy pixels to framebuffer, ignoring any pixels which
+ *        should be overrided by the background
+ */
 void gbGpu::renderSprites() {
+	Color lineColors[DISP_WIDTH]{ 0 };
+	bool bgOverSprite[DISP_WIDTH]{ false };
+
 	int line = ly;
-	Pallete& pallete = palletes[0];
+	Palette& palette = this->palette[0];
 
 	// Find all sprites to render on current scanline
 	std::vector<gbSprite> queue;
@@ -72,7 +89,8 @@ void gbGpu::renderSprites() {
 		int spriteY = line - (sprite.y_pos - 16);
 		bool yflip = sprite.flags & 0x40;
 		bool xflip = sprite.flags & 0x20;
-		
+		bool bgPriority = sprite.flags & 0x80;
+
 		int idx = sprite.tile_idx;
 		if (objSizeIs16()) {
 			idx &= 0xFFFE;
@@ -104,23 +122,32 @@ void gbGpu::renderSprites() {
 
 			// Index 0 is ignored and transparent
 			if (paletteIdx == 0) continue;
-
-			Color color = pallete.white;
-			switch (paletteColor) {
-			case 0: color = pallete.white; break;
-			case 1: color = pallete.light_gray; break;
-			case 2: color = pallete.dark_gray; break;
-			case 3: color = pallete.black; break;
-			}
+			Color& color = getColor(palette, paletteColor);
 
 			int drawX = correctX + sprite.x_pos - 8;
 
 			// Sprites can be partially (or completely) off screen.
 			if (line >= 0 && line < DISP_HEIGHT &&
 				drawX >= 0 && drawX < DISP_WIDTH) {
-				framebuffer[line][drawX] = color;
+				lineColors[drawX] = color;
+				bgOverSprite[drawX] = bgPriority;
 			}
 		}
+	}
+
+	// Copy pixel data to framebuffer
+	// If background has priority and the background color is NOT idx 0,
+	// then do not copy sprite pixel
+	UINT8 bgTransparentIdx = bgp & 0x3;
+	Color& bgTransparent = getColor(palette, bgTransparentIdx);
+
+	assert(line >= 0 && line < DISP_HEIGHT);
+
+	for (int x = 0; x < DISP_WIDTH; x++) {
+		Color& color = lineColors[x];
+		if (color.val == 0) continue;
+		if (bgOverSprite[x] && backBuffer[line][x] != bgTransparent) continue;
+		backBuffer[line][x] = color;
 	}
 }
 
@@ -194,6 +221,10 @@ void gbGpu::step() {
 			if (stat & VBLANK_INT) {
 				g_gb->cpu->interruptFlags |= LCDSTAT_INTR;
 			}
+
+			// Done rendering, copy to front buffer
+			size_t size = sizeof(Color) * DISP_WIDTH * DISP_HEIGHT;
+			memcpy(frontBuffer, backBuffer, size);
 		}
 		else {
 			mode = LcdMode::Search;

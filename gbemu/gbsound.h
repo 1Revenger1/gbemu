@@ -2,7 +2,7 @@
 #include "gbspace.h"
 
 class gbSound : public gbSpace {
-	UINT8 mem[0xFF40 - 0xFF10];
+	UINT8 mem[0xFF40 - 0xFF10]{ 0 };
 
 public:
 	virtual int writeByte(UINT16 addr, UINT8 byte) override;

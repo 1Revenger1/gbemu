@@ -45,11 +45,7 @@ UINT8 GameboyEmu::readByte(UINT16 addr) {
 	ret = cpu->readByte(addr);
 	if (ret != -1) return ret;
 
-	//if (addr == 0xFF50) { return 0xFF; }
-	//if (addr == 0xFF4D) { return 0xFF; }
-
 	debugPrint("Invalid read at %x\n", addr);
-	//exit(0x21);
 	return 0xFF;
 }
 

@@ -52,9 +52,13 @@ struct Color {
 	bool operator != (const Color& b) const {
 		return val != b.val;
 	}
+
+	bool operator == (const Color& b) const {
+		return val == b.val;
+	}
 };
 
-struct Pallete {
+struct Palette {
 	Color white;
 	Color light_gray;
 	Color dark_gray;
@@ -63,8 +67,8 @@ struct Pallete {
 
 class gbGpu : public gbSpace {
 public:
-	// Pallete from https://github.com/rvaccarim/FrozenBoy/blob/master/FrozenBoyUI/FrozenBoyGame.cs#L108-L114
-	Pallete palletes[1] {
+	// Palette from https://github.com/rvaccarim/FrozenBoy/blob/master/FrozenBoyUI/FrozenBoyGame.cs#L108-L114
+	Palette palette[1] {
 	{ { 224, 248, 208, 255 },
 	  { 136, 192, 112, 255 },
 	  { 52 , 104, 86 , 255 },
@@ -107,10 +111,8 @@ public:
 	bool objEnable() { return lcdc & 0x02; }
 	bool bgWindowPriority() { return lcdc & 0x01; }
 
-	Color framebuffer[DISP_HEIGHT][DISP_WIDTH]{ 0 };
-
-	static_assert(sizeof(framebuffer) == sizeof(Color) * DISP_HEIGHT * DISP_WIDTH);
-	static_assert(sizeof(Color) != 0);
+	Color backBuffer[DISP_HEIGHT][DISP_WIDTH]{ 0 };
+	Color frontBuffer[DISP_HEIGHT][DISP_WIDTH]{ 0 };
 
 	void renderSprites();
 	void renderTile(int x, int y, int bgX, int bgY, UINT16 tilemap);
