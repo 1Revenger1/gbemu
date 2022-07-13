@@ -13,9 +13,14 @@
 #include "SDLWindow.h"
 #include "gb.h"
 
-Rom* read_rom(const char* file) {
-	HANDLE hRom = CreateFileA(
-		file,
+Rom* readRom() {
+	PWSTR fileName;
+
+	HRESULT hr = openFileMenu(&fileName);
+	if (!SUCCEEDED(hr)) return nullptr;
+
+	HANDLE hRom = CreateFileW(
+		fileName,
 		GENERIC_READ,
 		FILE_SHARE_READ,
 		NULL,
@@ -154,11 +159,7 @@ int WINAPI WinMain(
 	debugPrint("%d FPS - %d cycle per frame\n", mode.refresh_rate, GB_HZ / mode.refresh_rate);
 	int cyclesPerFrame = GB_HZ / mode.refresh_rate;
 
-	Rom* rom = read_rom("Pokemon Blue.gb");
-	//Rom* rom = read_rom("07-jr,jp,call,ret,rst.gb");
-	//Rom* rom = read_rom("cpu_instrs.gb");
-	//Rom* rom = read_rom("01-special.gb");
-	//Rom* rom = read_rom("tetris.gb");
+	Rom* rom = readRom();
 	if (rom == nullptr) return 1;
 
 	printHeader(rom);

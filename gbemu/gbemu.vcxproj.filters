@@ -66,6 +66,9 @@
     <ClCompile Include="gbsound.cpp">
       <Filter>Source Files\IOSpace</Filter>
     </ClCompile>
+    <ClCompile Include="romMenu.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="gb.h">

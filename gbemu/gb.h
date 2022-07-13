@@ -83,3 +83,5 @@ private:
 };
 
 inline GameboyEmu* g_gb;
+
+HRESULT openFileMenu(PWSTR*);
