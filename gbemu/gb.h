@@ -1,69 +1,35 @@
 #pragma once
 #include <windows.h>
 #include <stdio.h>
+#include "gbram.h"
+#include "gbrom.h"
 #include "gbcpu.h"
+#include "gbgpu.h"
+#include "gbinput.h"
+#include "gbtimer.h"
+#include "gbserial.h"
+#include "gbsound.h"
+#include <vector>
+
+#ifdef BIG_ENDIAN
+#error "Big Endian not supported"
+#endif
+
+#if !defined BIG_ENDIAN && !defined LITTLE_ENDIAN
+#error "Endianness not given"
+#endif
 
 #define MAX_SIZE 0xFFFF
 
+#define GB_HZ 4194304
+#define SERIAL_HZ 8192
+#define SERIAL_DELAY GB_HZ / SERIAL_HZ
 
-#define KiloByte		1024
-#define ROM_BANK_SIZE	16 * KiloByte
-#define VRAM_SIZE		8 * KiloByte
-#define ERAM_SIZE		8 * KiloByte
-#define WRAM_BANKS_SIZE 4 * KiloByte
+#pragma warning( push )
+#pragma warning( disable: 26495 )
 
-#define SPRITE_ATTR_SIZE 0xFE9F - 0xFE00
-#define HIGH_RAM_SIZE 0xFFFE - 0xFF80
-
-#define ROM_BANK_TO_PTR(buffer, n) ((UINT8 *) buffer + ((n) * ROM_BANK_SIZE))
-
-struct gbRom {
-	UINT8* romBank0;
-	UINT8* romBankN;
-	int bank{ 0 };
-
-	// Battery backed data
-	UINT8 ram[ERAM_SIZE];
-	int ramBank{ 0 };
-
-	LPVOID romBuffer;
-	HANDLE hRom;
-	DWORD  romSize;
-};
-
-struct gbGpu {
-	UINT8 vram[VRAM_SIZE];
-	// int bank{ 0 };	// Two banks on Gameboy Color
-
-	UINT8 spriteAttr[SPRITE_ATTR_SIZE];
-};
-
-struct gbRam {
-	UINT8 ramBank0[WRAM_BANKS_SIZE];
-	UINT8 ramBankn[WRAM_BANKS_SIZE];
-	// int wramBank{ 0 };
-
-	UINT8 hram[HIGH_RAM_SIZE];
-};
-
-struct Gb {
-	gbRom rom;
-	gbGpu gpu;
-	gbRam ram;
-
-	gbCpu cpu;
-};
-
-
-void startupRom(Gb* gb);
-void execute(Gb* gb);
-UINT8 readByte(Gb* gb, UINT16 addr);
-void pushStackShort(Gb* gb, UINT16 val);
-UINT16 readStackShort(Gb* gb);
-UINT16 readShort(Gb* gb, UINT16 addr);
-void writeByte(Gb* gb, UINT16 addr, UINT8 val);
-
-inline void debugPrint(const char *fmt...) {
+#ifdef _DEBUG
+inline void debugPrint(const char* fmt...) {
 	char str[1024];
 	va_list args;
 	va_start(args, fmt);
@@ -71,3 +37,49 @@ inline void debugPrint(const char *fmt...) {
 	va_end(args);
 	OutputDebugStringA(str);
 }
+#else
+inline void debugPrint(const char* fmt...) {}
+#endif
+
+#pragma warning( pop )
+
+inline UINT64 g_cycles = 0;
+class Rom;
+
+class GameboyEmu {
+	std::vector<gbSpace> spaces;
+public:
+	GameboyEmu(Rom* rom) : rom(rom) {
+		//this->rom = rom;
+		cpu = new gbCpu();
+		gpu = new gbGpu();
+		ram = new gbRam();
+		input = new gbInput();
+		serial = new gbSerial();
+		timer = new gbTimer();
+		sound = new gbSound();
+	}
+
+	void step();
+
+	// Memory Read/Writes
+	UINT8 readByte(UINT16 addr);
+	UINT16 readShort(UINT16 addr);
+	void writeByte(UINT16 addr, UINT8 val);
+
+	// Stack
+	void pushStackByte(UINT8 val);
+	UINT8 popStackByte();
+
+	gbCpu* cpu;
+	gbGpu* gpu;
+	gbRam* ram;
+	gbInput* input;
+	gbSerial* serial;
+	gbSound* sound;
+	gbTimer* timer;
+private:
+	Rom* rom;
+};
+
+inline GameboyEmu* g_gb;

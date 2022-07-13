@@ -2,7 +2,11 @@
 
 #pragma once
 #include <windows.h>
+#include "gbspace.h"
 
+class gbCpu;
+
+#ifdef LITTLE_ENDIAN
 #define REGISTER(name, high, low) \
 	union {					\
 		struct {			\
@@ -11,27 +15,18 @@
 		};					\
 		UINT16 name;			\
 	}
+#else
+#define REGISTER(name, high, low) \
+	union {					\
+		struct {			\
+			UINT8 low;		\
+			UINT8 high;		\
+		};					\
+		UINT16 name;			\
+	}
+#endif
 
 #define BIT(n) (1 << (n))
-
-// Result is zero
-#define ZERO_FLAG		BIT(7)
-/*
-* 8 bit addition > $FF
-* 16 bit addition > $FFFF
-* subtraction or comparison is < $0
-* When a rotate/shift operation shifts out a high bit
-*/
-#define CARRY_FLAG		BIT(4)
-
-// BCD Flags
-
-// Previous instruction was a subtraction
-#define SUBTRACT_FLAG	BIT(6)
-//Carry for the lower 4 bits of result (CARRY_FLAG is for higher 8 bits)
-#define HALF_CARRY_FLAG BIT(5)
-
-#define ALL_FLAGS ZERO_FLAG | CARRY_FLAG | SUBTRACT_FLAG | HALF_CARRY_FLAG
 
 // interrupt enable flags
 #define VBLANK_INTR		BIT(0)
@@ -42,28 +37,93 @@
 
 #define ALL_INTR_FLAGS VBLANK_INTR | LCDSTAT_INTR | TIMER_INTR | SERIAL_INTR | JOYPAD_INTR
 
-struct gbCpu {
+enum class CpuState {
+	Fetch,
+	Prefix,
+	Working,
+	PrefixWork,
+	Stop,
+	Halt,
+};
+
+enum class InterruptEnable {
+	EnableDelay,
+	Enabled,
+	Disabled,
+};
+
+typedef void (*Step)(gbCpu*);
+
+struct Instruction {
+	const char* name;
+	const int bytes;
+	const int num_steps;
+	const Step steps[6];
+};
+
+class gbCpu : public gbSpace {
+private:
+	bool halt_bug = false;
+	const Instruction* currentOp = nullptr;
+	int opStep = 0;
+
+	UINT8 requestedIntr() { return interruptsEnabled & interruptFlags; }
+	const Instruction* getIntInstruction();
+	void printOp(UINT8 opByte);
+
+public:
+	gbCpu() {
+		SP = 0xFFFE;
+		PC = 0x100;
+
+#ifdef CGB
+		A = 0x11;
+		B = 0x00;
+#else
+		A = 0x01;
+		zero = 1;
+		subtract = 0;
+		BC = 0x1300;
+		DE = 0xD800;
+		HL = 0x4D01;
+#endif
+	}
+
 	// Accumulator & Flags
-	struct {
-		union {
-			UINT8 F;
-			struct {
-				UINT8 _ : 4;
-				UINT8 carry : 1;
-				UINT8 halfCarry : 1;
-				UINT8 subtract : 1;
-				UINT8 zero : 1;
+	union {
+		struct {
+			union {
+				UINT8 F;
+				struct {
+					UINT8 _ : 4;
+					UINT8 carry : 1;
+					UINT8 half_carry : 1;
+					UINT8 subtract : 1;
+					UINT8 zero : 1;
+				};
 			};
+			UINT8 A;
 		};
-		UINT8 A;
+		UINT16 AF;
 	};
 
 	REGISTER(BC, B, C);
 	REGISTER(DE, D, E);
 	REGISTER(HL, H, L);
-	UINT16 SP;	// Stack Pointer
-	UINT16 PC;	// Program Counter
+	REGISTER(SP, SP_h, SP_l); // Stack Pointer
+	REGISTER(PC, PC_h, PC_l); // Program Counter
 
-	bool interruptEnable{ true };
-	UINT8 interrupts{ ALL_INTR_FLAGS };
+	// ALU/Temp registers
+	UINT8 high = 0;
+	UINT8 low = 0;
+
+	CpuState state{ CpuState::Fetch };
+	InterruptEnable interruptMaster{ InterruptEnable::Disabled };
+	UINT8 interruptsEnabled{ 0x00 };
+	UINT8 interruptFlags{ 0xE1 };
+
+	void step();
+
+	virtual int writeByte(UINT16 addr, UINT8 byte) override;
+	virtual int readByte(UINT16 addr) override;
 };
