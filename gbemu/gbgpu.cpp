@@ -18,8 +18,7 @@ void gbGpu::renderTile(int x, int y, int bgX, int bgY, UINT16 tilemap) {
 	UINT16 tileAddr;
 	if (bgWindow8000Method()) {
 		tileAddr = 0x8000 + (tileNumber * 16);
-	}
-	else {
+	} else {
 		tileAddr = 0x9000 + INT8(tileNumber) * 16;
 	}
 
@@ -67,10 +66,20 @@ void gbGpu::renderSprites() {
 
 	for (gbSprite& sprite : queue) {
 		int spriteY = line - (sprite.y_pos - 16);
+		bool yflip = sprite.flags & 0x40;
+		bool xflip = sprite.flags & 0x20;
 		
 		int idx = sprite.tile_idx;
 		if (objSizeIs16()) {
 			idx &= 0xFFFE;
+		}
+
+		if (yflip) {
+			if (objSizeIs16()) {
+				spriteY = 16 - spriteY;
+			} else {
+				spriteY = 8 - spriteY;
+			}
 		}
 
 		UINT16 addr = 0x8000 + (idx * 16);
@@ -78,8 +87,6 @@ void gbGpu::renderSprites() {
 		addr += spriteY * 2;
 		UINT8 high = readByte(addr + 1);
 		UINT8 low = readByte(addr);
-
-		bool xflip = sprite.flags & 0x20;
 
 		for (int spriteX = 7; spriteX >= 0; spriteX--) {
 			UINT8 palette_dx = (low & 1) | ((high & 1) << 1);
@@ -98,7 +105,7 @@ void gbGpu::renderSprites() {
 
 			int drawX = correctX + sprite.x_pos - 8;
 
-			// Sprites can be partially (or completely) off screen. Stay in bounds!
+			// Sprites can be partially (or completely) off screen.
 			if (line >= 0 && line < DISP_HEIGHT &&
 				drawX >= 0 && drawX < DISP_WIDTH) {
 				framebuffer[line][drawX] = color;
