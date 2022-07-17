@@ -3,12 +3,20 @@
 #include "gbspace.h"
 #include <string>
 #include <cmath>
+#include <chrono>
 
 #define KB_SHIFT 4
 #define MB_SHIFT 8
 
 #define ROM_BANK_SIZE	0x4000
 #define ERAM_SIZE		0x2000
+
+struct GameSaveHeader {
+	int saveVersion;
+	int mbcVersion;
+	long long epoch; // Used for RTC in MBC3
+	int ramSize;
+};
 
 struct CartHeader {
 	UINT8 entryPoint[4];	// 0x100-0x103
@@ -78,7 +86,7 @@ protected:
 	const CartHeader* hdr = nullptr;
 	UINT8* rom = nullptr;
 
-	DWORD romSize;
+	size_t romSize;
 	int maxRomBanks = 2;
 
 	bool externalBatt = false;
@@ -90,14 +98,13 @@ protected:
 	int maxRamBanks = 1;
 
 public:
-	Rom(UINT8* rom, DWORD romSize);
+	Rom(UINT8* rom, size_t romSize);
 	~Rom();
 
 	virtual int writeByte(UINT16 addr, UINT8 byte) override;
 	virtual int readByte(UINT16 addr) override;
 	virtual const std::string getType();
 	const CartHeader* getHeader();
-
 };
 
 class MBC1Rom : public Rom {
@@ -113,7 +120,7 @@ private:
 	int romBank = 1;
 	int ramBank = 0;
 public:
-	MBC1Rom(UINT8* rom, DWORD romSize);
+	MBC1Rom(UINT8* rom, size_t romSize);
 
 	virtual int writeByte(UINT16 addr, UINT8 byte) override;
 	virtual int readByte(UINT16 addr) override;
@@ -127,9 +134,10 @@ private:
 	int romBank = 1;
 	int ramBank = 0;
 	bool externalTimer = false;
+	std::chrono::time_point<std::chrono::system_clock> epoch;
 
 public:
-	MBC3Rom(UINT8* rom, DWORD romSize);
+	MBC3Rom(UINT8* rom, size_t romSize);
 
 	virtual int readByte(UINT16 addr) override;
 	virtual int writeByte(UINT16 addr, UINT8 byte) override;
@@ -137,4 +145,4 @@ public:
 	const std::string getType();
 };
 
-Rom* createRom(UINT8* rom, DWORD romSize);
+Rom* createRom(UINT8* rom, size_t romSize);

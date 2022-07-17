@@ -1,7 +1,7 @@
 // Source of information from: https://gbdev.io/pandocs/CPU_Registers_and_Flags.html
 
 #pragma once
-#include <windows.h>
+#include <BaseTsd.h>
 #include "gbspace.h"
 
 class gbCpu;
@@ -73,6 +73,7 @@ private:
 
 public:
 	gbCpu() {
+#ifndef BOOT_ROM
 		SP = 0xFFFE;
 		PC = 0x100;
 
@@ -86,7 +87,11 @@ public:
 		BC = 0x1300;
 		DE = 0xD800;
 		HL = 0x4D01;
-#endif
+#endif // CGB
+
+#else
+		PC = 0;
+#endif // BOOT_ROM
 	}
 
 	// Accumulator & Flags

@@ -1,4 +1,5 @@
 #pragma once
+#define NOMINMAX
 #include <windows.h>
 #include <stdio.h>
 #include "gbram.h"
@@ -10,6 +11,7 @@
 #include "gbserial.h"
 #include "gbsound.h"
 #include <vector>
+#include <string>
 
 #ifdef BIG_ENDIAN
 #error "Big Endian not supported"
@@ -47,7 +49,6 @@ inline UINT64 g_cycles = 0;
 class Rom;
 
 class GameboyEmu {
-	std::vector<gbSpace> spaces;
 public:
 	GameboyEmu(Rom* rom) : rom(rom) {
 		//this->rom = rom;
@@ -58,6 +59,9 @@ public:
 		serial = new gbSerial();
 		timer = new gbTimer();
 		sound = new gbSound();
+#ifdef BOOT_ROM
+		bootRomEnable = true;
+#endif
 	}
 
 	void step();
@@ -79,9 +83,11 @@ public:
 	gbSound* sound;
 	gbTimer* timer;
 private:
+	bool bootRomEnable{ false };
 	Rom* rom;
 };
 
 inline GameboyEmu* g_gb;
 
 HRESULT openFileMenu(PWSTR*);
+void displayPopup(const std::string& text, HWND hWnd);

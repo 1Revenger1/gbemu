@@ -5,6 +5,10 @@
 #include <Windows.h>
 #include "SDL.h"
 
+#ifdef BOOT_ROM
+#include "bootRom.h"
+#endif
+
 // Stack decrement first, increments after
 
 void GameboyEmu::pushStackByte(UINT8 val) {
@@ -17,6 +21,11 @@ UINT8 GameboyEmu::popStackByte() {
 
 UINT8 GameboyEmu::readByte(UINT16 addr) {
 	int ret;
+
+#ifdef BOOT_ROM
+	if (bootRomEnable && addr < 0x100)
+		return bootRom[addr];
+#endif
 
 	ret = rom->readByte(addr);
 	if (ret != -1) return ret;
@@ -45,7 +54,6 @@ UINT8 GameboyEmu::readByte(UINT16 addr) {
 	ret = cpu->readByte(addr);
 	if (ret != -1) return ret;
 
-	debugPrint("Invalid read at %x\n", addr);
 	return 0xFF;
 }
 
@@ -83,5 +91,8 @@ void GameboyEmu::writeByte(UINT16 addr, UINT8 byte) {
 	ret = cpu->writeByte(addr, byte);
 	if (ret != -1) return;
 
-	debugPrint("Invalid write at %x = %x\n", addr, byte);
+	// BANK register
+	if (addr == 0xFF50) {
+		bootRomEnable = false;
+	}
 }

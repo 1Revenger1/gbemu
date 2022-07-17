@@ -89,7 +89,6 @@ INC_R8(L)
 
 #define DEC_R8(reg_a)                               \
 void dec_r##reg_a##(gbCpu* cpu) {                   \
-    UINT8 val = cpu->reg_a;                        \
     cpu->half_carry = ((cpu->reg_a & 0x0F) == 0); \
     cpu->reg_a--;                                  \
     cpu->subtract = 1;                             \
