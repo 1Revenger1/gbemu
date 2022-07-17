@@ -192,7 +192,7 @@ void gbGpu::step() {
 			g_gb->cpu->interruptFlags |= LCDSTAT_INTR;
 		}
 
-		if (ticks >= 20) {
+		if (ticks >= 80) {
 			mode = LcdMode::Render;
 			ticks = 0;
 		}
@@ -215,7 +215,10 @@ void gbGpu::step() {
 
 		renderLine();
 
-		if (ly == 143) {
+		ticks = 0;
+		ly++;
+
+		if (ly == 144) {
 			mode = LcdMode::VBlank;
 			g_gb->cpu->interruptFlags |= VBLANK_INTR;
 			if (stat & VBLANK_INT) {
@@ -232,9 +235,6 @@ void gbGpu::step() {
 				g_gb->cpu->interruptFlags |= LCDSTAT_INTR;
 			}
 		}
-
-		ticks = 0;
-		ly++;
 		break;
 	case LcdMode::VBlank:
 		if (ticks < 456) {
@@ -332,4 +332,5 @@ void GameboyEmu::step() {
 	timer->step();
 	cpu->step();
 	gpu->step();
+	sound->step();
 }
