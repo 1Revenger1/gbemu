@@ -1,5 +1,5 @@
 #pragma once
-#include <Windows.h>
+#include <BaseTsd.h>
 #include "gbspace.h"
 
 class gbSerial : public gbSpace {
