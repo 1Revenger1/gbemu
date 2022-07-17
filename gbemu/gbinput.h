@@ -1,5 +1,5 @@
 #pragma once
-#include "windows.h"
+#include <BaseTsd.h>
 #include "gbspace.h"
 
 #define ACTION_SELECT_MASK 0x20

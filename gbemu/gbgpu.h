@@ -2,7 +2,7 @@
 
 #include "SDL.h"
 #include "gbspace.h"
-#include <Windows.h>
+#include <BaseTsd.h>
 
 #define DISP_WIDTH 160
 #define DISP_HEIGHT 144
