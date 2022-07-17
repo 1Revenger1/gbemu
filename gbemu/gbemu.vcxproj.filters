@@ -25,6 +25,12 @@
     <Filter Include="Header Files\IOSpace">
       <UniqueIdentifier>{090d337d-e6b6-4910-b5ed-838ffa8eae1c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Platforms">
+      <UniqueIdentifier>{3e7c0b3e-eefc-4d9a-9c33-9f1562081e6f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Sound">
+      <UniqueIdentifier>{efa139af-f751-4183-ba5f-27aeb5da77cb}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="emu.cpp">
@@ -63,11 +69,11 @@
     <ClCompile Include="gbram.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="gbsound.cpp">
-      <Filter>Source Files\IOSpace</Filter>
+    <ClCompile Include="Windows.cpp">
+      <Filter>Source Files\Platforms</Filter>
     </ClCompile>
-    <ClCompile Include="romMenu.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="gbsound.cpp">
+      <Filter>Source Files\Sound</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -106,6 +112,9 @@
     </ClInclude>
     <ClInclude Include="gbsound.h">
       <Filter>Header Files\IOSpace</Filter>
+    </ClInclude>
+    <ClInclude Include="bootRom.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

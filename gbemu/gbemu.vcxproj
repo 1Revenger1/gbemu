@@ -116,7 +116,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions);LITTLE_ENDIAN</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions);LITTLE_ENDIAN;</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalIncludeDirectories>../include/</AdditionalIncludeDirectories>
@@ -161,10 +161,11 @@
     <ClCompile Include="mbc3.cpp" />
     <ClCompile Include="rom.cpp" />
     <ClCompile Include="gbtimer.cpp" />
-    <ClCompile Include="romMenu.cpp" />
     <ClCompile Include="SDLWindow.cpp" />
+    <ClCompile Include="Windows.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="bootRom.h" />
     <ClInclude Include="gb.h" />
     <ClInclude Include="gbcpu.h" />
     <ClInclude Include="gbgpu.h" />

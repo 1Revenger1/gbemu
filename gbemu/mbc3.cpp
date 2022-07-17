@@ -1,6 +1,6 @@
 #include "gbrom.h"
 
-MBC3Rom::MBC3Rom(UINT8* rom, DWORD romSize) : Rom(rom, romSize) {
+MBC3Rom::MBC3Rom(UINT8* rom, size_t romSize) : Rom(rom, romSize) {
 	switch (hdr->cartType) {
 	case MBC3_TIMER_BATT:
 	case MBC3_TIMER_BATT_RAM:
@@ -80,7 +80,8 @@ int MBC3Rom::writeByte(UINT16 addr, UINT8 byte) {
 }
 
 const std::string MBC3Rom::getType() {
-	std::string ret = "MBC1";
+	std::string ret = "MBC3";
+	if (externalTimer) ret += " + Timer";
 	if (externalRam) ret += " + RAM";
 	if (externalBatt) ret += " + BATT";
 	return ret;

@@ -1,6 +1,6 @@
 #include "gbrom.h"
 
-MBC1Rom::MBC1Rom(UINT8* rom, DWORD romSize) : Rom(rom, romSize) {
+MBC1Rom::MBC1Rom(UINT8* rom, size_t romSize) : Rom(rom, romSize) {
 	if (hdr->cartType == MBC1_RAM_BATT) externalBatt = true;
 }
 

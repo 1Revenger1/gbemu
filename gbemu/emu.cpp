@@ -1,10 +1,14 @@
-#include <windows.h>
+
+#include <BaseTsd.h>
 #include <stdio.h>
 #include <tchar.h>
 #include <strsafe.h>
 #include <iostream>
 #include <string>
 #include <memory>
+#include <fstream>
+#include <filesystem>
+#include <limits>
 
 #include "gbcpu.h"
 #include "gbinput.h"
@@ -15,76 +19,34 @@
 
 Rom* readRom() {
 	PWSTR fileName;
+	UINT8* romBuffer = nullptr;
+	size_t fileSize;
 
 	HRESULT hr = openFileMenu(&fileName);
 	if (!SUCCEEDED(hr)) return nullptr;
 
-	HANDLE hRom = CreateFileW(
-		fileName,
-		GENERIC_READ,
-		FILE_SHARE_READ,
-		NULL,
-		OPEN_EXISTING,
-		FILE_ATTRIBUTE_NORMAL,
-		NULL
-	);
+	std::filesystem::path file(fileName);
+	std::filesystem::path parent = file.parent_path();
+	std::ifstream in;
 
-	if (hRom == INVALID_HANDLE_VALUE) {
-		// Retrieve the system error message for the last-error code
+	try {
+		in.open(file, std::ios_base::binary | std::ios_base::in);
+		in.seekg(0, in.end);
+		fileSize = in.tellg();
+		in.seekg(0, in.beg);
 
-		LPTSTR lpMsgBuf;
-		LPTSTR lpDisplayBuf;
-		DWORD dw = GetLastError();
+		romBuffer = new UINT8[fileSize];
+		in.read((char *) romBuffer, fileSize);
 
-		FormatMessage(
-			FORMAT_MESSAGE_ALLOCATE_BUFFER |
-			FORMAT_MESSAGE_FROM_SYSTEM |
-			FORMAT_MESSAGE_IGNORE_INSERTS,
-			NULL,
-			dw,
-			MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-			(LPTSTR)&lpMsgBuf,
-			0, NULL);
-
-		// Display the error message and exit the process
-
-		lpDisplayBuf = (LPTSTR)LocalAlloc(LMEM_ZEROINIT,
-			(lstrlen((LPCTSTR)lpMsgBuf) + 40 * sizeof(TCHAR)));
-
-		if (lpDisplayBuf == nullptr) {
-			return nullptr;
-		}
-
-		StringCchPrintf((LPTSTR)lpDisplayBuf,
-			LocalSize(lpDisplayBuf) / sizeof(TCHAR),
-			TEXT("failed with error %d: %s"),
-			dw, lpMsgBuf);
-		MessageBox(NULL, (LPCTSTR)lpDisplayBuf, TEXT("Error"), MB_OK);
-		LocalFree(lpMsgBuf);
-		LocalFree(lpDisplayBuf);
-
-		return nullptr;
+		in.close();
 	}
-
-	DWORD fileSize = GetFileSize(hRom, NULL);
-	UINT8* romBuffer = new UINT8[fileSize];
-	DWORD bytesRead;
-
-	if (!ReadFile(
-		hRom,
-		romBuffer,
-		fileSize,
-		&bytesRead,
-		nullptr
-	))
-	{
-		OutputDebugString(_T("Failed to read rom\n"));
-		CloseHandle(hRom);
+	catch (std::ifstream::failure e) {
+		std::cerr << e.what();
+		debugPrint("%s\n", e.what());
 		return nullptr;
 	}
 
 	Rom* rom = createRom(romBuffer, fileSize);
-	CloseHandle(hRom);
 	return rom;
 }
 
@@ -100,6 +62,8 @@ void printHeader(Rom* rom) {
 		rom->getType().c_str()
 	);
 }
+
+bool pause = false;
 
 void handleSDLkey(SDL_KeyboardEvent& event, bool down) {
 	gbInputType input;
@@ -132,6 +96,11 @@ void handleSDLkey(SDL_KeyboardEvent& event, bool down) {
 	case SDLK_e:
 		input = gbInputType::B;
 		break;
+	case SDLK_p:
+		if (!down) {
+			pause = !pause;
+		}
+		return;
 	default: return;
 	}
 
@@ -148,7 +117,7 @@ int WINAPI WinMain(
 	SDL_Event event;
 	SDL_SetHint(SDL_HINT_RENDER_DRIVER, "direct3d11");
 	SDL_DisplayMode mode = { SDL_PIXELFORMAT_UNKNOWN, 0, 0, 0, 0 };
-	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_EVENTS) != 0) {
+	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_EVENTS | SDL_INIT_AUDIO) != 0) {
 		debugPrint("Could not init SDL: %\n", SDL_GetError());
 		return 1;
 	}
@@ -168,8 +137,8 @@ int WINAPI WinMain(
 	sdlWindow mgr(rom->getHeader()->title);
 
 	UINT64 lastUpdateTime = SDL_GetPerformanceCounter();
-	UINT64 deltaCounter;
 	bool running = true;
+
 	while (running) {
 		while (SDL_PollEvent(&event)) {
 			if (event.type == SDL_QUIT) 
@@ -181,17 +150,19 @@ int WINAPI WinMain(
 		}
 
 		UINT64 currentTime = SDL_GetPerformanceCounter();
-		deltaCounter = currentTime - lastUpdateTime;
+		UINT64 deltaCounter = currentTime - lastUpdateTime;
 		float elapsed = deltaCounter / (float)SDL_GetPerformanceFrequency();
 
-		int cyclesLeft = (int) (GB_HZ * elapsed);
-		while (cyclesLeft > 0) {
-			cyclesLeft -= 4;
-			g_gb->step();
+		if (!pause) {
+			int cyclesLeft = (int)(GB_HZ * elapsed);
+			while (cyclesLeft > 0) {
+				cyclesLeft -= 4;
+				g_gb->step();
+			}
 		}
 
-		mgr.present();
 		lastUpdateTime = currentTime;
+		mgr.present();
 	}
 
 	return 0;

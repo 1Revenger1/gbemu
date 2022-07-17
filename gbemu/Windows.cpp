@@ -10,6 +10,7 @@
 #include <strsafe.h>      // for StringCchPrintfW
 #include <shtypes.h>      // for COMDLG_FILTERSPEC
 #include <new>
+#include <stdlib.h>
 
 #pragma comment(linker,"\"/manifestdependency:type='win32' \
 name='Microsoft.Windows.Common-Controls' version='6.0.0.0' \
@@ -18,6 +19,8 @@ processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 const COMDLG_FILTERSPEC c_rgSaveTypes[] = {
     {L"Gameboy (*.gb)", L"*.gb"}
 };
+
+#define GB_INDEX 1
 
 class OpenDialogEventHandler : public IFileDialogEvents
 {
@@ -47,7 +50,7 @@ public:
     }
 
     // IFileDialogEvents methods
-    IFACEMETHODIMP OnFileOk(IFileDialog*) { return S_OK; };
+    IFACEMETHODIMP OnFileOk(IFileDialog*);
     IFACEMETHODIMP OnFolderChange(IFileDialog*) { return S_OK; };
     IFACEMETHODIMP OnFolderChanging(IFileDialog*, IShellItem*) { return S_OK; };
     IFACEMETHODIMP OnHelp(IFileDialog*) { return S_OK; };
@@ -63,6 +66,39 @@ private:
     ~OpenDialogEventHandler() { };
     long _cRef;
 };
+
+HRESULT OpenDialogEventHandler::OnFileOk(IFileDialog* dialog) {
+    IShellItem* shellItem;
+    PWSTR fileStr = nullptr;
+
+    HRESULT hr = dialog->GetResult(&shellItem);
+    if (FAILED(hr)) return S_FALSE;
+
+    hr = shellItem->GetDisplayName(SIGDN_FILESYSPATH, &fileStr);
+    shellItem->Release();
+    if (FAILED(hr)) return S_FALSE;
+    PWSTR extension = PathFindExtensionW(fileStr);
+
+    PCWSTR gbExt = L".gb";
+    int res = CompareStringEx(LOCALE_NAME_USER_DEFAULT, NORM_IGNORECASE,
+        gbExt, -1, extension, -1,
+        NULL, NULL, 0);
+
+    if (res != CSTR_EQUAL) {
+        HWND hwnd = 0;
+        IOleWindow* pWindow;
+        HRESULT hr = dialog->QueryInterface(IID_PPV_ARGS(&pWindow));
+        if (SUCCEEDED(hr)) {
+            hr = pWindow->GetWindow(&hwnd);
+        }
+
+        std::string s("Invalid file extension");
+        displayPopup(s, hwnd);
+        return S_FALSE;
+    }
+
+    return S_OK;
+}
 
 // Instance creation helper
 HRESULT OpenDialogEventHandler_CreateInstance(REFIID riid, void** ppv)
@@ -88,45 +124,45 @@ HRESULT openFileMenu(PWSTR* path)
     DWORD dwFlags;
 
     HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
-    
+
     // Create File Dialog instnace
     hr = CoCreateInstance(CLSID_FileOpenDialog, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pfd));
-    if (!SUCCEEDED(hr))
+    if (FAILED(hr))
         goto exit;
 
     // Create an event handling object, and hook it up to the dialog.
     hr = OpenDialogEventHandler_CreateInstance(IID_PPV_ARGS(&pfde));
-    if (!SUCCEEDED(hr))
+    if (FAILED(hr))
         goto exit;
 
     // Hook up the event handler.
     hr = pfd->Advise(pfde, &dwCookie);
-    if (!SUCCEEDED(hr))
+    if (FAILED(hr))
         goto exit;
 
     // Read current settings
     hr = pfd->GetOptions(&dwFlags);
-    if (!SUCCEEDED(hr))
+    if (FAILED(hr))
         goto exit;
 
     // Add setting to force files to exist in file system
     hr = pfd->SetOptions(dwFlags | FOS_FORCEFILESYSTEM);
-    if (!SUCCEEDED(hr))
+    if (FAILED(hr))
         goto exit;
 
     // Only allow gameboy roms
     hr = pfd->SetFileTypes(ARRAYSIZE(c_rgSaveTypes), c_rgSaveTypes);
-    if (!SUCCEEDED(hr))
+    if (FAILED(hr))
         goto exit;
 
     hr = pfd->Show(NULL);
-    if (!SUCCEEDED(hr))
+    if (FAILED(hr))
         goto exit;
 
     // Obtain the result, once the user clicks the 'Open' button.
     // The result is an IShellItem object.
     hr = pfd->GetResult(&psiResult);
-    if (!SUCCEEDED(hr))
+    if (FAILED(hr))
         goto exit;
 
     hr = psiResult->GetDisplayName(SIGDN_FILESYSPATH, path);
@@ -145,4 +181,11 @@ exit:
 
     CoUninitialize();
     return hr;
+}
+
+void displayPopup(const std::string& text, HWND hWnd) {
+    wchar_t wtext[200];
+    size_t ret;
+    mbstowcs_s(&ret, wtext, text.c_str(), 200);
+    MessageBox(hWnd, wtext, NULL, MB_OK);
 }

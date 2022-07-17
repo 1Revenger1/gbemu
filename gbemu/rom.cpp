@@ -2,7 +2,7 @@
 
 // No MBC
 
-Rom::Rom(UINT8* rom, DWORD romSize) : rom(rom), romSize(romSize) {
+Rom::Rom(UINT8* rom, size_t romSize) : rom(rom), romSize(romSize) {
 	hdr = reinterpret_cast<CartHeader*>(rom + 0x100);
 	if (hdr->romSize < 0x9) {
 		maxRomBanks = (int)std::pow(2, hdr->romSize + 1);
@@ -61,7 +61,28 @@ const CartHeader* Rom::getHeader() {
 	return hdr;
 }
 
-Rom* createRom(UINT8* rom, DWORD romSize) {
+bool checksum(UINT8* rom) {
+	UINT8 x = 0;
+	for (int i = 0x134; i < 0x14D; i++) {
+		x += ~rom[i];
+	}
+
+	return x == rom[0x014D];
+}
+
+Rom* createRom(UINT8* rom, size_t romSize) {
+	if (romSize < 0x200) {
+		std::string s("ROM too small");
+		displayPopup(s, nullptr);
+		return nullptr;
+	}
+
+	if (!checksum(rom)) {
+		std::string s("Invalid ROM checksum");
+		displayPopup(s, nullptr);
+		return nullptr;
+	}
+
 	CartHeader* hdr = reinterpret_cast<CartHeader*>(rom + 0x100);
 	Rom* romObj = nullptr;
 	switch (hdr->cartType) {
@@ -80,6 +101,10 @@ Rom* createRom(UINT8* rom, DWORD romSize) {
 	case MBC3_TIMER_BATT_RAM:
 		romObj = new MBC3Rom(rom, romSize);
 		break;
+	default: 
+		std::string s("Invalid ROM type");
+		displayPopup(s, nullptr);
+		return nullptr;
 	}
 
 	return romObj;
