@@ -1,9 +1,12 @@
 #include "gbrom.h"
 
-MBC3Rom::MBC3Rom(UINT8* rom, size_t romSize) : Rom(rom, romSize) {
+MBC3Rom::MBC3Rom(std::filesystem::path path, UINT8* eram, UINT8* rom, size_t romSize)
+	: Rom(path, eram, rom, romSize)
+{
 	switch (hdr->cartType) {
 	case MBC3_TIMER_BATT:
 	case MBC3_TIMER_BATT_RAM:
+		rtcEpoch = std::chrono::system_clock::now();
 		externalTimer = true;
 		[[fallthrough]];
 	case MBC3_RAM_BATT:
@@ -33,8 +36,37 @@ int MBC3Rom::readByte(UINT16 addr) {
 			return 0xFF;
 		}
 
-		int bank = ramBank % maxRamBanks;
-		return ram[addr + (bank * ERAM_SIZE)];
+		if (externalTimer && ramBank > 0x7 && ramBank < 0x10) {
+			debugPrint("Reading RTC\n");
+			const auto now = std::chrono::system_clock::now();
+			const auto epoch = clockLatched == Latched ? latchedTime : rtcEpoch;
+			const auto timeSinceEpoch = rtcEpoch - now;
+			switch (ramBank) {
+			//case 0x8: 
+			//	const auto seconds = std::chrono::duration_cast<std::chrono::seconds>(timeSinceEpoch);
+			//	return seconds.count() % 60;
+			//case 0x9:
+			//	const auto minutes = std::chrono::duration_cast<std::chrono::minutes>(timeSinceEpoch);
+			//	return minutes.count() % 60;
+			//case 0xA:
+			//	const auto hours = std::chrono::duration_cast<std::chrono::hours>(timeSinceEpoch);
+			//	return hours.count() % 24;
+			//case 0xB:
+			//	// Lower 8 bits of day
+			//	const auto days = std::chrono::duration_cast<std::chrono::days>(timeSinceEpoch);
+			//	return days.count() % 0xFF;
+			//case 0xC:
+			//	const auto days = std::chrono::duration_cast<std::chrono::days>(timeSinceEpoch);
+			//	return (days.count() >> 8) & 1;
+			default:
+				return 0xFF;
+			}
+
+		} else {
+			int bank = ramBank % maxRamBanks;
+			return ram[addr + (bank * ERAM_SIZE)];
+		}
+
 	}
 
 	return -1;
@@ -56,20 +88,35 @@ int MBC3Rom::writeByte(UINT16 addr, UINT8 byte) {
 	
 	// RAM/RTC Bank Select
 	if (addr < 0x6000) {
-		ramBank = byte & 0x7;
+		debugPrint("Select 0x%x\n", byte);
+		ramBank = byte & 0x0F;
 		return 0;
 	}
 	
 	// Real time clock latching
 	if (addr < 0x8000) {
-		debugPrint("Clock Latch!\n");
+		switch (clockLatched) {
+		case Unlatched: 
+			if (byte == 0)
+				clockLatched = ByteOne;
+			break;
+		case ByteOne:
+			if (byte == 1) {
+				clockLatched = Latched;
+				latchedTime = std::chrono::system_clock::now();
+			} else {
+				clockLatched = Unlatched;
+			}
+			break;
+		}
 		return 0;
 	}
 
 	// External RAM
 	if (addr >= 0xA000 && addr <= 0xC000) {
 		if (ramEnable) {
-			ram[addr - 0xA000] = byte;
+			int bank = ramBank % maxRamBanks;
+			ram[addr - 0xA000 + (bank * ERAM_SIZE)] = byte;
 		}
 
 		// Always consume even if RAM is not enabled

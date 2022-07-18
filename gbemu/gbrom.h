@@ -4,6 +4,7 @@
 #include <string>
 #include <cmath>
 #include <chrono>
+#include <filesystem>
 
 #define KB_SHIFT 4
 #define MB_SHIFT 8
@@ -11,12 +12,14 @@
 #define ROM_BANK_SIZE	0x4000
 #define ERAM_SIZE		0x2000
 
+#pragma pack(push, 1)
 struct GameSaveHeader {
 	int saveVersion;
 	int mbcVersion;
 	long long epoch; // Used for RTC in MBC3
 	int ramSize;
 };
+#pragma pack(pop)
 
 struct CartHeader {
 	UINT8 entryPoint[4];	// 0x100-0x103
@@ -97,14 +100,18 @@ protected:
 	UINT8* ram = nullptr;
 	int maxRamBanks = 1;
 
+	// To save later
+	std::filesystem::path eramPath;
+
 public:
-	Rom(UINT8* rom, size_t romSize);
+	Rom(std::filesystem::path path, UINT8* eram, UINT8* rom, size_t romSize);
 	~Rom();
 
 	virtual int writeByte(UINT16 addr, UINT8 byte) override;
 	virtual int readByte(UINT16 addr) override;
 	virtual const std::string getType();
 	const CartHeader* getHeader();
+	virtual void save();
 };
 
 class MBC1Rom : public Rom {
@@ -120,7 +127,7 @@ private:
 	int romBank = 1;
 	int ramBank = 0;
 public:
-	MBC1Rom(UINT8* rom, size_t romSize);
+	MBC1Rom(std::filesystem::path path, UINT8* eram, UINT8* rom, size_t romSize);
 
 	virtual int writeByte(UINT16 addr, UINT8 byte) override;
 	virtual int readByte(UINT16 addr) override;
@@ -131,13 +138,21 @@ public:
 class MBC3Rom : public Rom {
 	typedef Rom super;
 private:
+	enum LatchState {
+		Unlatched,
+		ByteOne,
+		Latched
+	};
+
 	int romBank = 1;
 	int ramBank = 0;
 	bool externalTimer = false;
-	std::chrono::time_point<std::chrono::system_clock> epoch;
+	LatchState clockLatched = Unlatched;
+	std::chrono::time_point<std::chrono::system_clock> rtcEpoch;
+	std::chrono::time_point<std::chrono::system_clock> latchedTime;
 
 public:
-	MBC3Rom(UINT8* rom, size_t romSize);
+	MBC3Rom(std::filesystem::path path, UINT8* eram, UINT8* rom, size_t romSize);
 
 	virtual int readByte(UINT16 addr) override;
 	virtual int writeByte(UINT16 addr, UINT8 byte) override;
@@ -145,4 +160,4 @@ public:
 	const std::string getType();
 };
 
-Rom* createRom(UINT8* rom, size_t romSize);
+Rom* createRom(std::filesystem::path& path);

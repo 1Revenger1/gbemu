@@ -64,6 +64,11 @@ public:
 #endif
 	}
 
+	~GameboyEmu() {
+		delete rom;
+		delete sound;
+	}
+
 	void step();
 
 	// Memory Read/Writes

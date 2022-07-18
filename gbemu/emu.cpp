@@ -19,34 +19,12 @@
 
 Rom* readRom() {
 	PWSTR fileName;
-	UINT8* romBuffer = nullptr;
-	size_t fileSize;
 
 	HRESULT hr = openFileMenu(&fileName);
 	if (!SUCCEEDED(hr)) return nullptr;
 
-	std::filesystem::path file(fileName);
-	std::filesystem::path parent = file.parent_path();
-	std::ifstream in;
-
-	try {
-		in.open(file, std::ios_base::binary | std::ios_base::in);
-		in.seekg(0, in.end);
-		fileSize = in.tellg();
-		in.seekg(0, in.beg);
-
-		romBuffer = new UINT8[fileSize];
-		in.read((char *) romBuffer, fileSize);
-
-		in.close();
-	}
-	catch (std::ifstream::failure e) {
-		std::cerr << e.what();
-		debugPrint("%s\n", e.what());
-		return nullptr;
-	}
-
-	Rom* rom = createRom(romBuffer, fileSize);
+	std::filesystem::path path(fileName);
+	Rom* rom = createRom(path);
 	return rom;
 }
 
@@ -164,6 +142,8 @@ int WINAPI WinMain(
 		lastUpdateTime = currentTime;
 		mgr.present();
 	}
+
+	delete g_gb;
 
 	return 0;
 }
