@@ -125,6 +125,10 @@ int WINAPI WinMain(
 				handleSDLkey(event.key, true);
 			if (event.type == SDL_KEYUP)
 				handleSDLkey(event.key, false);
+			if (event.type == SDL_WINDOWEVENT) {
+				if (event.window.event == SDL_WINDOWEVENT_MOVED)
+					lastUpdateTime = SDL_GetPerformanceCounter();
+			}
 		}
 
 		UINT64 currentTime = SDL_GetPerformanceCounter();
