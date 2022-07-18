@@ -17,7 +17,8 @@ void gbSC1::triggerSound() {
 	frequencyShadow = freq;
 	sweepTimer = sweepPeriod;
 	sweepEnabled = sweepPeriod != 0 || sweepShift != 0;
-	shiftFrequency(true);
+	if (sweepShift != 0)
+		shiftFrequency(true);
 }
 
 void gbSC1::shiftFrequency(bool write) {
@@ -214,7 +215,7 @@ double gbSC3::step(bool lengthClock, bool volumeClock, bool sweepClock) {
 	timer -= 4;
 	if (timer <= 0) {
 		UINT16 freq = mem[3] | ((mem[4] & 0x7) << 8);
-		timer = WAVE_FREQUENCY_PERIOD(freq);
+		timer += WAVE_FREQUENCY_PERIOD(freq);
 		sample++;
 		sample %= 32;
 	}
@@ -489,16 +490,16 @@ void gbSound::step() {
 
 	// The gameboy frequency is not divisible by the output sample rate (48000)
 	// Add an extra sample when needed to keep the sample rate at 48000
-	max += remainders < OUTPUT_SAMPLES_REMAINDER  ? 1 : 0;
+	//max += remainders < OUTPUT_SAMPLES_REMAINDER  ? 1 : 0;
 
 	sample %= max;
 	if (sample == 0) {
 		buf.push_back((float) leftTotal / 200);
 		buf.push_back((float) rightTotal / 200);
 
-		if (remainders-- < 0) {
+		/*if (remainders-- < 0) {
 			remainders = OUTPUT_SAMPLES_REMAINDER_MAX;
-		}
+		}*/
 
 		leftTotal = 0;
 		rightTotal = 0;
