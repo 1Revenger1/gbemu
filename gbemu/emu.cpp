@@ -31,9 +31,12 @@ Rom* readRom() {
 void printHeader(Rom* rom) {
 	const CartHeader* hdr = rom->getHeader();
 	char str[17]{ 0 }; // 16 char max + \0
-
-	// TODO: Smarter title
-	strncpy_s(str, hdr->title, 17);
+	if (hdr->cgb.mode & 0x80) {
+		memcpy(str, hdr->cgb.title, 11);
+	}
+	else {
+		memcpy(str, hdr->title, 16);
+	}
 
 	debugPrint("RomName: %s\nRomType: %s\n",
 		str,
@@ -112,7 +115,16 @@ int WINAPI WinMain(
 	printHeader(rom);
 
 	g_gb = new GameboyEmu(rom);
-	sdlWindow mgr(rom->getHeader()->title);
+
+	char title[17]{ 0 };
+	const CartHeader* hdr = rom->getHeader();
+	if (hdr->cgb.mode & 0x80) {
+		memcpy(title, hdr->cgb.title, 11);
+	}
+	else {
+		memcpy(title, hdr->title, 16);
+	}
+	sdlWindow mgr(title);
 
 	UINT64 lastUpdateTime = SDL_GetPerformanceCounter();
 	bool running = true;
@@ -136,7 +148,7 @@ int WINAPI WinMain(
 		float elapsed = deltaCounter / (float)SDL_GetPerformanceFrequency();
 
 		if (!pause) {
-			int cyclesLeft = (int)(GB_HZ * elapsed);
+			int cyclesLeft = std::min(GB_HZ * elapsed, cyclesPerFrame * 1.5f);
 			while (cyclesLeft > 0) {
 				cyclesLeft -= 4;
 				g_gb->step();

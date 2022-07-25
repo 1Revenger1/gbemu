@@ -17,7 +17,7 @@ name='Microsoft.Windows.Common-Controls' version='6.0.0.0' \
 processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 
 const COMDLG_FILTERSPEC c_rgSaveTypes[] = {
-    {L"Gameboy (*.gb)", L"*.gb"}
+    {L"Gameboy (*.gb)", L"*.gb;*.gbc"}
 };
 
 #define GB_INDEX 1
@@ -83,6 +83,13 @@ HRESULT OpenDialogEventHandler::OnFileOk(IFileDialog* dialog) {
     int res = CompareStringEx(LOCALE_NAME_USER_DEFAULT, NORM_IGNORECASE,
         gbExt, -1, extension, -1,
         NULL, NULL, 0);
+
+    if (res != CSTR_EQUAL) {
+        PCWSTR gbcExt = L".gbc";
+        res = CompareStringEx(LOCALE_NAME_USER_DEFAULT, NORM_IGNORECASE,
+            gbcExt, -1, extension, -1,
+            NULL, NULL, 0);
+    }
 
     if (res != CSTR_EQUAL) {
         HWND hwnd = 0;
