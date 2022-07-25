@@ -36,33 +36,34 @@ int MBC3Rom::readByte(UINT16 addr) {
 			return 0xFF;
 		}
 
-		if (externalTimer && ramBank > 0x7 && ramBank < 0x10) {
+		if (externalTimer && ramBank > 0x8 && ramBank < 0x0D) {
 			debugPrint("Reading RTC\n");
 			const auto now = std::chrono::system_clock::now();
 			const auto epoch = clockLatched == Latched ? latchedTime : rtcEpoch;
 			const auto timeSinceEpoch = rtcEpoch - now;
 			switch (ramBank) {
-			//case 0x8: 
-			//	const auto seconds = std::chrono::duration_cast<std::chrono::seconds>(timeSinceEpoch);
-			//	return seconds.count() % 60;
-			//case 0x9:
-			//	const auto minutes = std::chrono::duration_cast<std::chrono::minutes>(timeSinceEpoch);
-			//	return minutes.count() % 60;
-			//case 0xA:
-			//	const auto hours = std::chrono::duration_cast<std::chrono::hours>(timeSinceEpoch);
-			//	return hours.count() % 24;
-			//case 0xB:
-			//	// Lower 8 bits of day
-			//	const auto days = std::chrono::duration_cast<std::chrono::days>(timeSinceEpoch);
-			//	return days.count() % 0xFF;
+			case 0x8: 
+				const auto seconds = std::chrono::duration_cast<std::chrono::seconds>(timeSinceEpoch);
+				return seconds.count() % 60;
+			case 0x9:
+				const auto minutes = std::chrono::duration_cast<std::chrono::minutes>(timeSinceEpoch);
+				return minutes.count() % 60;
+			case 0xA:
+				const auto hours = std::chrono::duration_cast<std::chrono::hours>(timeSinceEpoch);
+				return hours.count() % 24;
+			case 0xB:
+				// Lower 8 bits of day
+				const auto days = std::chrono::duration_cast<std::chrono::days>(timeSinceEpoch);
+				return days.count() % 0xFF;
 			//case 0xC:
 			//	const auto days = std::chrono::duration_cast<std::chrono::days>(timeSinceEpoch);
 			//	return (days.count() >> 8) & 1;
 			default:
-				return 0xFF;
+				return 0x0;
 			}
 
 		} else {
+			if (ramBank >= maxRamBanks) return 0xFF;
 			int bank = ramBank % maxRamBanks;
 			return ram[addr + (bank * ERAM_SIZE)];
 		}
@@ -89,7 +90,7 @@ int MBC3Rom::writeByte(UINT16 addr, UINT8 byte) {
 	// RAM/RTC Bank Select
 	if (addr < 0x6000) {
 		debugPrint("Select 0x%x\n", byte);
-		ramBank = byte & 0x0F;
+		ramBank = byte;
 		return 0;
 	}
 	
@@ -114,7 +115,7 @@ int MBC3Rom::writeByte(UINT16 addr, UINT8 byte) {
 
 	// External RAM
 	if (addr >= 0xA000 && addr <= 0xC000) {
-		if (ramEnable) {
+		if (ramEnable && ramBank < maxRamBanks) {
 			int bank = ramBank % maxRamBanks;
 			ram[addr - 0xA000 + (bank * ERAM_SIZE)] = byte;
 		}

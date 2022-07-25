@@ -278,7 +278,7 @@ IM16_HIGH_READ_NOT_COND(carry)
 IM16_HIGH_READ_NOT_COND(zero)
 
 void im16_rSP_high(gbCpu* cpu) {
-    g_gb->writeByte((cpu->high << 8) | cpu->low + 1, cpu->SP_h);
+    g_gb->writeByte(((cpu->high << 8) | cpu->low) + 1, cpu->SP_h);
 }
 
 void im16_rSP_low(gbCpu* cpu) {
@@ -496,7 +496,6 @@ void ccf(gbCpu* cpu) {
 }
 
 void prefix(gbCpu* cpu) {
-    //debugPrint("PREFIX!");
     cpu->state = CpuState::Prefix;
 }
 
@@ -924,11 +923,11 @@ void int_rPC_58h(gbCpu* cpu) { cpu->PC = 0x0058; }
 void int_rPC_60h(gbCpu* cpu) { cpu->PC = 0x0060; }
 
 static const Instruction interruptInstructions[] {
-    { "INT VBlank",     0, 5, { nop, nop, push_rPC_h, push_rPC_l, int_rPC_40h }},
-    { "INT LCD Stat",   0, 5, { nop, nop, push_rPC_h, push_rPC_l, int_rPC_48h }},
-    { "INT Timer",      0, 5, { nop, nop, push_rPC_h, push_rPC_l, int_rPC_50h }},
-    { "INT Serial",     0, 5, { nop, nop, push_rPC_h, push_rPC_l, int_rPC_58h }},
-    { "INT Joypad",     0, 5, { nop, nop, push_rPC_h, push_rPC_l, int_rPC_60h }},
+    { "INT VBlank",     0, 5, { disable_interrupts, nop, push_rPC_h, push_rPC_l, int_rPC_40h }},
+    { "INT LCD Stat",   0, 5, { disable_interrupts, nop, push_rPC_h, push_rPC_l, int_rPC_48h }},
+    { "INT Timer",      0, 5, { disable_interrupts, nop, push_rPC_h, push_rPC_l, int_rPC_50h }},
+    { "INT Serial",     0, 5, { disable_interrupts, nop, push_rPC_h, push_rPC_l, int_rPC_58h }},
+    { "INT Joypad",     0, 5, { disable_interrupts, nop, push_rPC_h, push_rPC_l, int_rPC_60h }},
 };
 
 const Instruction* gbCpu::getIntInstruction() {
@@ -992,7 +991,6 @@ void gbCpu::step()
         // EI interrupt enable has a 1 instruction delay
         if (interruptMaster == InterruptEnable::EnableDelay)
             interruptMaster = InterruptEnable::Enabled;
-
 
 #ifdef _DEBUG
         //printOp(opByte);

@@ -169,7 +169,13 @@ Rom* createRom(std::filesystem::path& file) {
 
 	// Try to find file
 	std::filesystem::path parent = file.parent_path();
-	std::filesystem::path eramPath = parent / hdr->title;
+	char title[17]{ 0 };
+	if (hdr->cgb.mode & 0x80) {
+		memcpy(title, hdr->cgb.title, 11);
+	} else {
+		memcpy(title, hdr->title, 16);
+	}
+	std::filesystem::path eramPath = parent / title;
 	eramPath += ".sav";
 	if (!getEram(eramPath, &eram, &eramSize)) {
 		int banks = romBankSize(hdr->ramSize);
