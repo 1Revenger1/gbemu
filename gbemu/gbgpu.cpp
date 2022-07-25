@@ -98,9 +98,9 @@ void gbGpu::renderSprites() {
 
 		if (yflip) {
 			if (objSizeIs16()) {
-				spriteY = 16 - spriteY;
+				spriteY = 15 - spriteY;
 			} else {
-				spriteY = 8 - spriteY;
+				spriteY = 7 - spriteY;
 			}
 		}
 
@@ -198,7 +198,6 @@ void gbGpu::step() {
 		}
 		break;
 	case LcdMode::Render:
-		// TODO: Render stuff
 		if (ticks >= 172) {
 			mode = LcdMode::HBlank;
 			ticks = 0;
